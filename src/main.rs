@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     context
         .eval(Source::from_bytes(&src))?
         .as_callable()
-        .ok_or("expression evaluates to function".red())?
+        .ok_or("expression evaluates to function")?
         .call(
             &JsValue::undefined(),
             &[js_string!("An arbitrary string to test the filter expression").into()],
