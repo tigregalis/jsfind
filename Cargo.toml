@@ -1,0 +1,15 @@
+[package]
+name = "jsfind"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+keywords = ["find", "grep", "js"]
+categories = ["command-line-utilities"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+boa_engine = "0.17.0"
+colored = "2.0.4"
+ignore = "0.4.20"
+rayon = "1.7.0"
