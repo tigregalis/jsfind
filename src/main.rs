@@ -5,11 +5,23 @@ use rayon::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
-    let filter = args.next().ok_or("filter not provided")?;
+    let filter = args.next().ok_or("filter expression not provided")?;
+
+    let src = format!("(line => ({filter}))");
+    // test the provided filter to make sure it's valid
+    let mut context = Context::default();
+    context
+        .eval(Source::from_bytes(&src))?
+        .as_callable()
+        .ok_or("expression evaluates to function")?
+        .call(
+            &JsValue::undefined(),
+            &[js_string!("An arbitrary string to test the filter expression").into()],
+            &mut context,
+        )?;
+
     let current_dir = std::env::current_dir()?;
-
     let walker = Walk::new(current_dir).par_bridge();
-
     walker.for_each(|dent_result| {
         let dent = match dent_result {
             Ok(dent) => dent,
@@ -24,7 +36,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !file_type.is_file() {
             return;
         }
+
         let path = dent.path();
+
         let Some(file_name) = path.file_name().and_then(std::ffi::OsStr::to_str) else {
             return;
         };
@@ -35,18 +49,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return;
             }
         };
-        let lines = file_contents.lines().enumerate();
-        let pad = (file_contents.lines().count() + 1).to_string().len();
-        let mut context = Context::default();
 
+        let pad = (file_contents.lines().count() + 1).to_string().len();
+
+        let mut context = Context::default();
         let function = context
-            .eval(Source::from_bytes(&format!("(line => {filter})")))
-            .unwrap()
+            .eval(Source::from_bytes(&src))
+            .expect("the provided filter is valid")
             .as_callable()
             .cloned()
-            .expect("expression evaluates to function");
+            .expect("the provided filter is valid");
+
         let mut printed_file_name = false;
-        for (line_number, line) in lines {
+
+        for (line_number, line) in file_contents.lines().enumerate() {
             let res = match function.call(
                 &JsValue::undefined(),
                 &[js_string!(line).into()],
@@ -54,8 +70,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ) {
                 Ok(v) => v,
                 Err(e) => {
-                    eprintln!("error evaluating filter `{filter}` for line {line_number}: {e}");
-                    return;
+                    let line_number = line_number + 1;
+                    eprintln!("error @ {file_name}:{line_number}: {e}");
+                    continue;
                 }
             };
             if res.to_boolean() {
