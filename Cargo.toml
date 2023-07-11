@@ -12,4 +12,5 @@ categories = ["command-line-utilities"]
 boa_engine = "0.17.0"
 colored = "2.0.4"
 ignore = "0.4.20"
+pathdiff = "0.2.1"
 rayon = "1.7.0"
